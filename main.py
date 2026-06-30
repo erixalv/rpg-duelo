@@ -71,8 +71,12 @@ def aplica_acao(estado: EstadoDuelo, acao: dict) -> EstadoDuelo:
 
         ativo.mana -= magia_escolhida.custo_mana
         ativo.mana = max(0, ativo.mana)
-        alvo.vida -= magia_escolhida.dano
-        alvo.vida = max(0, alvo.vida)
+
+        if magia_escolhida.dano < 0:
+            ativo.vida -= magia_escolhida.dano
+        else:
+            alvo.vida -= magia_escolhida.dano
+            alvo.vida = max(0, alvo.vida)
 
     novo.turno_do_p1 = not novo.turno_do_p1
     return novo
@@ -153,6 +157,9 @@ def duelo_interativo(estado: EstadoDuelo, profundidade_ia: int = 4):
     print(f"Você controla: {estado.personagem_1.nome}")
     print(f"A IA controla: {estado.personagem_2.nome}\n")
 
+    quem = "Você" if estado.turno_do_p1 else "IA"
+    print(f"🎲 Sorteio: {quem} ataca primeiro!\n")
+
     while not duelo_encerrado(estado):
         mostra_status(estado)
 
@@ -188,9 +195,10 @@ def duelo_interativo(estado: EstadoDuelo, profundidade_ia: int = 4):
 
 
 if __name__ == "__main__":
+    import random
     estado_inicial = EstadoDuelo(
         personagem_1=deepcopy(arthur),
         personagem_2=deepcopy(mago_negro),
-        turno_do_p1=True,
+        turno_do_p1=random.choice([True, False]),
     )
     duelo_interativo(estado_inicial, profundidade_ia=4)

@@ -37,11 +37,16 @@ def aplica_acao(estado: EstadoDuelo, acao: dict):
                 magia_escolhida = magia
                 break
 
-        alvo.vida -= magia_escolhida.dano
-        alvo.vida = max(0, alvo.vida)
         ativo.mana -= magia_escolhida.custo_mana 
         ativo.mana = max(0, ativo.mana)
-        novo.log.append(f"{ativo.nome} usou {magia_escolhida.nome} e causou {magia_escolhida.dano} de dano")
+
+        if magia_escolhida.dano < 0:
+            ativo.vida -= magia_escolhida.dano
+            novo.log.append(f"{ativo.nome} usou {magia_escolhida.nome} e recuperou {-magia_escolhida.dano} de vida")
+        else:
+            alvo.vida -= magia_escolhida.dano
+            alvo.vida = max(0, alvo.vida)
+            novo.log.append(f"{ativo.nome} usou {magia_escolhida.nome} e causou {magia_escolhida.dano} de dano")
 
     novo.trocar_turno()
     return novo

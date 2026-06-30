@@ -1,5 +1,6 @@
 from copy import deepcopy
 import math
+import random
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -8,7 +9,14 @@ from pydantic import BaseModel
 
 from estado_duelo import EstadoDuelo
 from heuristica import avaliar_estado
-from instancias import legolas, mago_negro
+from instancias import arthur, mago_negro, grom, legolas
+
+PERSONAGENS = {
+    "arthur": arthur,
+    "mago_negro": mago_negro,
+    "grom": grom,
+    "legolas": legolas
+}
 
 
 # ─────────────────────────────────────────
@@ -74,12 +82,13 @@ def aplica_acao(estado: EstadoDuelo, acao: dict) -> tuple[EstadoDuelo, str]:
 
         ativo.mana -= magia_escolhida.custo_mana
         ativo.mana = max(0, ativo.mana)
-        alvo.vida -= magia_escolhida.dano
-        alvo.vida = max(0, alvo.vida)
 
         if magia_escolhida.dano < 0:
+            ativo.vida -= magia_escolhida.dano
             linha_log = f"{ativo.nome} conjurou {magia_escolhida.nome} e recuperou {-magia_escolhida.dano} de vida."
         else:
+            alvo.vida -= magia_escolhida.dano
+            alvo.vida = max(0, alvo.vida)
             linha_log = f"{ativo.nome} conjurou {magia_escolhida.nome} e causou {magia_escolhida.dano} de dano em {alvo.nome}."
 
     novo.turno_do_p1 = not novo.turno_do_p1
@@ -107,7 +116,7 @@ def negamax(estado: EstadoDuelo, profundidade: int, alfa: float, beta: float) ->
     return melhor_valor
 
 
-def escolher_melhor_acao(estado: EstadoDuelo, profundidade: int = 4) -> dict:
+def escolher_melhor_acao(estado: EstadoDuelo, profundidade: int = 4) -> tuple[dict, float]:
     melhor_acao = None
     melhor_valor = -math.inf
 
@@ -119,7 +128,7 @@ def escolher_melhor_acao(estado: EstadoDuelo, profundidade: int = 4) -> dict:
             melhor_valor = valor
             melhor_acao = acao
 
-    return melhor_acao
+    return melhor_acao, melhor_valor
 
 
 # ─────────────────────────────────────────
@@ -130,23 +139,30 @@ PROFUNDIDADE_IA = 4
 
 # Guardamos vida_max/mana_max separadamente porque a dataclass Personagem
 # só tem "vida"/"mana" atuais.
-def novo_jogo():
-    p1 = deepcopy(legolas)
-    p2 = deepcopy(mago_negro)
-    estado = EstadoDuelo(personagem_1=p1, personagem_2=p2, turno_do_p1=True)
+def novo_jogo(p1_id="legolas", p2_id="mago_negro"):
+    p1 = deepcopy(PERSONAGENS.get(p1_id, legolas))
+    p2 = deepcopy(PERSONAGENS.get(p2_id, mago_negro))
+    
+    comeca_p1 = random.choice([True, False])
+    estado = EstadoDuelo(personagem_1=p1, personagem_2=p2, turno_do_p1=comeca_p1)
+    
+    quem_comeca = p1.nome if comeca_p1 else p2.nome
+    
     return {
         "estado": estado,
         "vida_max_p1": p1.vida,
         "mana_max_p1": p1.mana,
         "vida_max_p2": p2.vida,
         "mana_max_p2": p2.mana,
-        "log": [],
+        "log": [f"Duelo iniciado! {p1.nome} vs {p2.nome}", f"🎲 Sorteio: {quem_comeca} ataca primeiro!"],
         "encerrado": False,
         "vencedor": None,
     }
 
 
 jogo = novo_jogo()
+if not jogo["estado"].turno_do_p1:
+    turno_da_ia()
 
 
 # ─────────────────────────────────────────
@@ -215,9 +231,10 @@ def checar_fim_de_jogo():
 def turno_da_ia():
     """Roda o turno da IA automaticamente após a jogada do jogador."""
     while not jogo["encerrado"] and not jogo["estado"].turno_do_p1:
-        acao = escolher_melhor_acao(jogo["estado"], profundidade=PROFUNDIDADE_IA)
+        acao, score = escolher_melhor_acao(jogo["estado"], profundidade=PROFUNDIDADE_IA)
         novo_estado, linha_log = aplica_acao(jogo["estado"], acao)
         jogo["estado"] = novo_estado
+        linha_log += f" 🧠 (Score de Vantagem Negamax: {score:.1f})"
         jogo["log"].append(linha_log)
         checar_fim_de_jogo()
 
@@ -264,10 +281,22 @@ def post_acao(acao_req: AcaoRequest):
     return estado_para_frontend()
 
 
+@app.get("/personagens")
+def get_personagens():
+    return [{"id": k, "nome": v.nome} for k, v in PERSONAGENS.items()]
+
+
+class ReiniciarRequest(BaseModel):
+    p1_id: str
+    p2_id: str
+
+
 @app.post("/reiniciar")
-def post_reiniciar():
+def post_reiniciar(req: ReiniciarRequest):
     global jogo
-    jogo = novo_jogo()
+    jogo = novo_jogo(req.p1_id, req.p2_id)
+    if not jogo["estado"].turno_do_p1:
+        turno_da_ia()
     return estado_para_frontend()
 
 

@@ -3,243 +3,387 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RPG de Duelo</title>
+  <title>RPG de Duelo Moderno</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-color: #0b0b14;
+      --card-bg: rgba(25, 25, 45, 0.6);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --primary: #9d4edd;
+      --primary-hover: #c77dff;
+      --player-color: #4cc9f0;
+      --ia-color: #f72585;
+      --life: #10b981;
+      --mana: #3b82f6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f0f1a;
+      background: var(--bg-color);
+      background-image: radial-gradient(circle at top right, rgba(157, 78, 221, 0.15), transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(76, 201, 240, 0.1), transparent 40%);
       color: #e0e0e0;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 32px 16px;
+      padding: 40px 20px;
     }
 
     h1 {
-      font-size: 1.6rem;
-      color: #c9a0ff;
-      margin-bottom: 28px;
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: -webkit-linear-gradient(45deg, #c77dff, #4cc9f0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 30px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    /* ── Controles de Jogo ── */
+    #setup-bar {
+      display: flex;
+      gap: 15px;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      padding: 15px 25px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 40px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .select-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .select-group label {
+      font-size: 0.8rem;
+      color: #aaa;
+      text-transform: uppercase;
       letter-spacing: 1px;
+    }
+
+    select {
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      border: 1px solid var(--border-color);
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    select:focus { border-color: var(--primary); }
+
+    .btn-primary {
+      background: linear-gradient(45deg, var(--primary), var(--player-color));
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: auto;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(157, 78, 221, 0.4);
     }
 
     /* ── Arena ── */
     #arena {
       display: flex;
-      gap: 32px;
+      gap: 30px;
       width: 100%;
-      max-width: 760px;
-      margin-bottom: 28px;
+      max-width: 900px;
+      margin-bottom: 30px;
     }
 
     .card {
       flex: 1;
-      background: #1a1a2e;
-      border: 1px solid #2e2e50;
-      border-radius: 12px;
-      padding: 20px;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 25px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease;
     }
+
+    .card:hover { transform: translateY(-5px); }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+    }
+
+    .card.jogador::before { background: var(--player-color); }
+    .card.ia::before { background: var(--ia-color); }
 
     .card h2 {
-      font-size: 1.1rem;
-      margin-bottom: 14px;
-      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
     }
 
-    .card.ia h2 { color: #ff7eb3; }
-    .card.jogador h2 { color: #7eb3ff; }
+    .card.jogador h2 { color: var(--player-color); }
+    .card.ia h2 { color: var(--ia-color); }
 
     .stat-label {
-      font-size: 0.75rem;
-      color: #888;
-      margin-bottom: 4px;
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
     }
 
     .barra-container {
-      background: #2a2a3e;
-      border-radius: 6px;
-      height: 14px;
-      margin-bottom: 12px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
+      height: 18px;
+      margin-bottom: 8px;
       overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.05);
     }
 
     .barra {
       height: 100%;
-      border-radius: 6px;
-      transition: width 0.4s ease;
+      border-radius: 8px;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .barra-vida  { background: #4caf7d; }
-    .barra-mana  { background: #5b8dee; }
-    .barra-vida.baixa  { background: #e05555; }
+    .barra-vida  { background: linear-gradient(90deg, #059669, #34d399); }
+    .barra-mana  { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+    .barra-vida.baixa  { background: linear-gradient(90deg, #dc2626, #f87171); }
 
     .stat-valor {
-      font-size: 0.82rem;
-      color: #aaa;
-      margin-top: -8px;
-      margin-bottom: 12px;
+      font-size: 0.9rem;
+      color: #fff;
+      margin-bottom: 15px;
+      text-align: right;
+      font-weight: 600;
     }
 
-    /* ── Turno ── */
+    /* ── Turno e Ações ── */
     #turno-aviso {
-      font-size: 0.95rem;
-      color: #c9a0ff;
-      margin-bottom: 16px;
-      min-height: 22px;
-      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 20px;
+      padding: 10px 25px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      min-height: 44px;
     }
 
-    /* ── Ações ── */
     #acoes {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 15px;
       justify-content: center;
-      margin-bottom: 28px;
-      min-height: 48px;
+      margin-bottom: 40px;
+      min-height: 50px;
     }
 
     .btn-acao {
-      background: #2a2a4a;
-      border: 1px solid #4a4a80;
-      color: #d0d0ff;
-      border-radius: 8px;
-      padding: 10px 18px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      border-radius: 12px;
+      padding: 14px 24px;
       cursor: pointer;
-      font-size: 0.88rem;
-      transition: background 0.2s, transform 0.1s;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-acao::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.5s;
     }
 
     .btn-acao:hover:not(:disabled) {
-      background: #3a3a6a;
-      transform: translateY(-1px);
+      background: rgba(76, 201, 240, 0.2);
+      border-color: var(--player-color);
+      transform: translateY(-2px);
+    }
+
+    .btn-acao:hover:not(:disabled)::before {
+      left: 100%;
     }
 
     .btn-acao:disabled {
-      opacity: 0.35;
+      opacity: 0.4;
       cursor: not-allowed;
     }
 
     /* ── Log ── */
     #log-container {
       width: 100%;
-      max-width: 760px;
-      background: #1a1a2e;
-      border: 1px solid #2e2e50;
-      border-radius: 12px;
-      padding: 16px;
-      max-height: 220px;
+      max-width: 900px;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      height: 250px;
       overflow-y: auto;
     }
 
+    #log-container::-webkit-scrollbar { width: 8px; }
+    #log-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+    #log-container::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+
     #log-container h3 {
-      font-size: 0.85rem;
-      color: #888;
-      margin-bottom: 10px;
+      font-size: 1rem;
+      color: #aaa;
+      margin-bottom: 15px;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
     }
 
     .log-linha {
-      font-size: 0.83rem;
-      color: #bbb;
-      padding: 4px 0;
-      border-bottom: 1px solid #22223a;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      background: rgba(0,0,0,0.2);
+      border-left: 3px solid #666;
+      border-radius: 4px;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .log-linha.ia-action {
+      border-left-color: var(--ia-color);
+      color: #f1f1f1;
+    }
+    
+    .log-linha.player-action {
+      border-left-color: var(--player-color);
     }
 
-    .log-linha:last-child { border-bottom: none; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
 
     /* ── Fim de jogo ── */
     #fim-jogo {
       display: none;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      margin-bottom: 24px;
+      gap: 20px;
+      margin-bottom: 30px;
+      animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
-    #fim-jogo p {
-      font-size: 1.3rem;
+    #fim-jogo h2 {
+      font-size: 2rem;
+      text-shadow: 0 0 10px rgba(255,215,0,0.5);
       color: #ffd700;
     }
 
-    #btn-reiniciar {
-      background: #3a2a6a;
-      border: 1px solid #7a5abf;
-      color: #d0b0ff;
-      border-radius: 8px;
-      padding: 10px 28px;
-      cursor: pointer;
-      font-size: 0.95rem;
-      transition: background 0.2s;
+    @keyframes bounceIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
-
-    #btn-reiniciar:hover { background: #4a3a7a; }
   </style>
 </head>
 <body>
 
-  <h1>⚔️ RPG de Duelo</h1>
+  <h1>⚔️ Duelo Épico</h1>
+
+  <div id="setup-bar">
+    <div class="select-group">
+      <label>Seu Herói</label>
+      <select id="select-p1"></select>
+    </div>
+    <div class="select-group">
+      <label>Oponente (IA)</label>
+      <select id="select-p2"></select>
+    </div>
+    <button class="btn-primary" onclick="reiniciar()">Novo Jogo</button>
+  </div>
 
   <div id="arena">
     <div class="card jogador">
       <h2 id="nome-jogador">Herói</h2>
-
       <p class="stat-label">Vida</p>
-      <div class="barra-container">
-        <div class="barra barra-vida" id="barra-vida-jogador" style="width:100%"></div>
-      </div>
-      <p class="stat-valor" id="texto-vida-jogador">100 / 100</p>
+      <div class="barra-container"><div class="barra barra-vida" id="barra-vida-jogador"></div></div>
+      <p class="stat-valor" id="texto-vida-jogador">- / -</p>
 
       <p class="stat-label">Mana</p>
-      <div class="barra-container">
-        <div class="barra barra-mana" id="barra-mana-jogador" style="width:100%"></div>
-      </div>
-      <p class="stat-valor" id="texto-mana-jogador">50 / 50</p>
+      <div class="barra-container"><div class="barra barra-mana" id="barra-mana-jogador"></div></div>
+      <p class="stat-valor" id="texto-mana-jogador">- / -</p>
     </div>
 
     <div class="card ia">
       <h2 id="nome-ia">Inimigo</h2>
-
       <p class="stat-label">Vida</p>
-      <div class="barra-container">
-        <div class="barra barra-vida" id="barra-vida-ia" style="width:100%"></div>
-      </div>
-      <p class="stat-valor" id="texto-vida-ia">100 / 100</p>
+      <div class="barra-container"><div class="barra barra-vida" id="barra-vida-ia"></div></div>
+      <p class="stat-valor" id="texto-vida-ia">- / -</p>
 
       <p class="stat-label">Mana</p>
-      <div class="barra-container">
-        <div class="barra barra-mana" id="barra-mana-ia" style="width:100%"></div>
-      </div>
-      <p class="stat-valor" id="texto-mana-ia">50 / 50</p>
+      <div class="barra-container"><div class="barra barra-mana" id="barra-mana-ia"></div></div>
+      <p class="stat-valor" id="texto-mana-ia">- / -</p>
     </div>
   </div>
 
-  <p id="turno-aviso">Carregando...</p>
+  <div id="turno-aviso">Carregando batalha...</div>
 
   <div id="acoes"></div>
 
   <div id="fim-jogo">
-    <p id="texto-vencedor"></p>
-    <button id="btn-reiniciar" onclick="reiniciar()">Jogar novamente</button>
+    <h2 id="texto-vencedor"></h2>
   </div>
 
   <div id="log-container">
-    <h3>Log do duelo</h3>
+    <h3>Diário de Batalha</h3>
     <div id="log"></div>
   </div>
 
   <script>
-    // ── Busca o estado atual e atualiza a UI ──
+    let logMostrado = 0;
+
+    async function init() {
+      // Carrega personagens
+      const res = await fetch("/personagens");
+      const personagens = await res.json();
+      
+      const selectP1 = document.getElementById("select-p1");
+      const selectP2 = document.getElementById("select-p2");
+      
+      personagens.forEach(p => {
+        selectP1.innerHTML += `<option value="${p.id}" ${p.id==='legolas'?'selected':''}>${p.nome}</option>`;
+        selectP2.innerHTML += `<option value="${p.id}" ${p.id==='mago_negro'?'selected':''}>${p.nome}</option>`;
+      });
+
+      await carregarEstado();
+    }
+
     async function carregarEstado() {
       const res = await fetch("/estado");
       const estado = await res.json();
       renderizar(estado);
     }
 
-    // ── Envia a ação do jogador e atualiza com o novo estado ──
     async function executarAcao(acao) {
       desabilitarBotoes();
       const res = await fetch("/acao", {
@@ -251,86 +395,84 @@
       renderizar(estado);
     }
 
-    // ── Reinicia a partida ──
     async function reiniciar() {
-      await fetch("/reiniciar", { method: "POST" });
+      const p1 = document.getElementById("select-p1").value;
+      const p2 = document.getElementById("select-p2").value;
+      
+      await fetch("/reiniciar", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ p1_id: p1, p2_id: p2 })
+      });
+      
       document.getElementById("fim-jogo").style.display = "none";
       document.getElementById("acoes").style.display = "flex";
+      document.getElementById("log").innerHTML = ""; // Limpa log
+      logMostrado = 0;
       await carregarEstado();
     }
 
-    // ── Atualiza toda a UI com base no estado recebido ──
     function renderizar(estado) {
-      // Personagens
       atualizarPersonagem("jogador", estado.jogador);
       atualizarPersonagem("ia", estado.ia);
 
-      // Aviso de turno
       const aviso = document.getElementById("turno-aviso");
       if (estado.encerrado) {
-        aviso.textContent = "";
+        aviso.textContent = "A batalha terminou!";
       } else {
         aviso.textContent = estado.turno === "jogador"
-          ? "🟢 Sua vez — escolha uma ação"
-          : "⏳ Aguardando a IA...";
+          ? "👉 Sua vez — escolha seu movimento estratégico"
+          : "⏳ A IA (Negamax) está calculando a melhor jogada...";
       }
 
-      // Log — adiciona apenas linhas novas
+      // Renderiza novo log
       const logEl = document.getElementById("log");
-      const linhasAtuais = logEl.querySelectorAll(".log-linha").length;
-      estado.log.slice(linhasAtuais).forEach(linha => {
-        const p = document.createElement("p");
+      const novasLinhas = estado.log.slice(logMostrado);
+      novasLinhas.forEach(linha => {
+        const p = document.createElement("div");
         p.className = "log-linha";
+        if(linha.includes("Negamax Score")) p.classList.add("ia-action");
+        else if(linha.includes("atacou") || linha.includes("conjurou")) p.classList.add("player-action");
         p.textContent = linha;
         logEl.appendChild(p);
       });
-      // Rola para o fim
+      logMostrado = estado.log.length;
+      
       const container = document.getElementById("log-container");
       container.scrollTop = container.scrollHeight;
 
-      // Botões de ação
       renderizarAcoes(estado.acoes || []);
 
-      // Fim de jogo
       if (estado.encerrado) {
         document.getElementById("acoes").style.display = "none";
         const fimEl = document.getElementById("fim-jogo");
         fimEl.style.display = "flex";
         document.getElementById("texto-vencedor").textContent =
-          estado.vencedor === "jogador" ? "🏆 Você venceu!" : "💀 A IA venceu!";
+          estado.vencedor === "jogador" ? "🏆 Você é o Vencedor!" : "💀 A Máquina Venceu!";
       }
     }
 
-    // ── Atualiza os dados de um personagem (jogador ou ia) ──
     function atualizarPersonagem(quem, dados) {
       document.getElementById(`nome-${quem}`).textContent = dados.nome;
-
       const pctVida = Math.max(0, Math.round((dados.vida / dados.vida_max) * 100));
       const barraVida = document.getElementById(`barra-vida-${quem}`);
       barraVida.style.width = pctVida + "%";
-      // Fica vermelha quando abaixo de 30%
       barraVida.classList.toggle("baixa", pctVida < 30);
-      document.getElementById(`texto-vida-${quem}`).textContent =
-        `${dados.vida} / ${dados.vida_max}`;
+      document.getElementById(`texto-vida-${quem}`).textContent = `${dados.vida} / ${dados.vida_max}`;
 
       const pctMana = Math.max(0, Math.round((dados.mana / dados.mana_max) * 100));
       document.getElementById(`barra-mana-${quem}`).style.width = pctMana + "%";
-      document.getElementById(`texto-mana-${quem}`).textContent =
-        `${dados.mana} / ${dados.mana_max}`;
+      document.getElementById(`texto-mana-${quem}`).textContent = `${dados.mana} / ${dados.mana_max}`;
     }
 
-    // ── Renderiza os botões de ação do jogador ──
     function renderizarAcoes(acoes) {
       const container = document.getElementById("acoes");
       container.innerHTML = "";
-
       if (acoes.length === 0) return;
-
       acoes.forEach(acao => {
         const btn = document.createElement("button");
         btn.className = "btn-acao";
-        btn.textContent = acao.label;
-        // Magia sem mana fica desabilitada
+        btn.innerHTML = acao.tipo === 'atacar' ? `🗡️ ${acao.label}` : `✨ ${acao.label}`;
         if (acao.disponivel === false) btn.disabled = true;
         btn.onclick = () => executarAcao({ tipo: acao.tipo, id: acao.id });
         container.appendChild(btn);
@@ -341,8 +483,7 @@
       document.querySelectorAll(".btn-acao").forEach(b => b.disabled = true);
     }
 
-    // ── Inicia ──
-    window.onload = carregarEstado;
+    window.onload = init;
   </script>
 </body>
 </html>
